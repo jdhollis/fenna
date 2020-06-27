@@ -35,7 +35,6 @@ then
 
   backend=$sandbox_env
   echo $sandbox_env > .fenna/sandbox
-  echo "user.tfvars" >> .gitignore
 else
   echo "Which backend would you like to use? [$(echo $backends)]"
     read -p "> " backend
@@ -43,5 +42,6 @@ else
 fi
 
 ln -sf ".fenna/backends/${backend}.tfvars" .fenna/backend
+echo "user.tfvars" >> .gitignore
 
 # fenna onboard
