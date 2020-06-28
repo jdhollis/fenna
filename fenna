@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+profile_name_for () {
+  local root_profile="$1" target_env="$2"
+
+  if [[ $target_env == "root" ]]
+  then
+    echo "$root_profile"
+  else
+    echo "${root_profile}-${target_env}"
+  fi
+}
+
+onboard () {
+  local root_profile profile
+
+  echo "What AWS profile would you like to use as your root profile?"
+    read -p "> " root_profile
+  echo
+
+  echo $root_profile > .fenna/root_profile
+
+  local backend_env=$(cat .fenna/backend/env)
+  local backend_profile=$(profile_name_for $root_profile $backend_env)
+
+  echo $backend_profile > .fenna/backend/profile
+
+  if [[ -f ".fenna/sandbox" ]]
+  then
+    local suffix
+    local sandbox_env=$(cat .fenna/sandbox)
+
+    profile="${root_profile}-${sandbox_env}"
+
+    echo "What suffix would you like to use to distinguish your resources in the sandbox?"
+      read -p "> " suffix
+    echo
+
+    echo $suffix > .fenna/suffix
+    touch ${sandbox_env}.tfvars
+    touch user.tfvars
+  else
+    local target_env=$(readlink .fenna/backend/current | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+    profile=$(profile_name_for $root_profile $target_env)
+  fi
+
+  echo $profile > .fenna/profile
+}
+
+bootstrap () {
+  if [[ ! -d ".fenna" ]]
+  then
+    mkdir -p .fenna/backend
+  fi
+
+  cat > .fenna/.gitignore <<EOS
+backend/profile
+root_profile
+suffix
+EOS
+
+  local service_name
+
+  echo "What is this service named?"
+    read -p "> " service_name
+  echo
+
+  echo $service_name > .fenna/service_name
+
+  if [[ ! -d ".fenna/backends" ]]
+  then
+    local repository_url
+
+    echo "What's your backend config repository's URL?"
+      read repository_url
+    echo
+
+    git submodule add $repository_url .fenna/backends
+  fi
+
+  local is_sandboxable
+
+  echo "Will this service be developed in a sandbox? [yes no]"
+    read -p "> " is_sandboxable
+  echo
+
+  local backend
+  local environments=$(ls -1 .fenna/backends | sed -e 's/\.tfvars$//')
+
+  if [[ $is_sandboxable == "yes" ]]
+  then
+    local sandbox_env
+    echo "What is the sandbox environment named? [$(echo $environments)]"
+      read -p "> " sandbox_env
+    echo
+
+    backend=$sandbox_env
+    echo $sandbox_env > .fenna/sandbox
+    echo "user.tfvars" >> .gitignore
+  else
+    rm -f .fenna/sandbox
+
+    echo "Which backend would you like to use? [$(echo $environments)]"
+      read -p "> " backend
+    echo
+  fi
+
+  ln -sf "../backends/${backend}.tfvars" .fenna/backend/current
+
+  local backend_env
+
+  echo "Where is your backend stored? [$(echo $environments)]"
+    read -p "> " backend_env
+  echo
+
+  echo $backend_env > .fenna/backend/env
+
+  onboard
+}
+
+init () {
+  local backend_profile=$(cat .fenna/backend/profile)
+  local suffix
+
+  if [[ -f ".fenna/suffix" ]]
+  then
+    suffix=$(cat .fenna/suffix)
+  fi
+
+  if [[ -f ".fenna/sandbox" ]] && [[ ! -z "$suffix" ]]
+  then
+    terraform init \
+        -backend-config .fenna/backend/current \
+        -backend-config "profile=${backend_profile}" \
+        -backend-config "key=$(cat .fenna/service_name)-${suffix}/terraform.tfstate" \
+        ${@-}
+  else
+    terraform init \
+      -backend-config .fenna/backend/current \
+      -backend-config "profile=${backend_profile}" \
+      ${@-}
+  fi
+}
+
+plan () {
+  local profile=$(cat .fenna/profile)
+
+  if [[ -f ".fenna/sandbox" ]]
+  then
+    local sandbox_env=$(cat .fenna/sandbox)
+    local suffix
+
+    if [[ -f ".fenna/suffix" ]]
+    then
+      suffix=$(cat .fenna/suffix)
+    fi
+
+    terraform plan \
+      -var "profile=${profile}" \
+      -var "suffix=${suffix}" \
+      -var-file "${sandbox_env}.tfvars"
+      -var-file "user.tfvars" \
+      -out "plan" \
+      ${@-}
+  else
+    terraform plan \
+      -var "profile=${profile}" \
+      -out "plan" \
+      ${@-}
+  fi
+}
+
+apply () {
+  terraform apply ${@-} "plan"
+}
+
+cmd="$1"
+shift
+case "$cmd" in
+  bootstrap) bootstrap ;;
+  onboard) onboard ;;
+  init) init "$@" ;;
+  plan) plan "$@" ;;
+  apply) apply "$@" ;;
+esac
