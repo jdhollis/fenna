@@ -130,10 +130,10 @@ init () {
   if [[ -f ".fenna/sandbox" ]] && [[ ! -z "$suffix" ]]
   then
     terraform init \
-        -backend-config .fenna/backend/current \
-        -backend-config "profile=${backend_profile}" \
-        -backend-config "key=$(cat .fenna/service_name)-${suffix}/terraform.tfstate" \
-        ${@-}
+      -backend-config .fenna/backend/current \
+      -backend-config "profile=${backend_profile}" \
+      -backend-config "key=$(cat .fenna/service_name)-${suffix}/terraform.tfstate" \
+      ${@-}
   else
     terraform init \
       -backend-config .fenna/backend/current \
