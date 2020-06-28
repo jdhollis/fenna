@@ -2,11 +2,11 @@
 
 if [[ ! -d ".fenna" ]]
 then
-	mkdir .fenna
+	mkdir -p .fenna/backend
 fi
 
 cat > .fenna/.gitignore <<EOS
-backend_profile
+backend/profile
 root_profile
 suffix
 EOS
@@ -25,23 +25,30 @@ echo "Will this service be developed in a sandbox? [yes no]"
   read -p "> " is_sandboxable
 echo
 
-backends=$(ls -1 .fenna/backends | sed -e 's/\.tfvars$//')
+environments=$(ls -1 .fenna/backends | sed -e 's/\.tfvars$//')
 
 if [[ $is_sandboxable == "yes" ]]
 then
-  echo "What is the sandbox environment named? [$(echo $backends)]"
+  echo "What is the sandbox environment named? [$(echo $environments)]"
     read -p "> " sandbox_env
   echo
 
   backend=$sandbox_env
   echo $sandbox_env > .fenna/sandbox
 else
-  echo "Which backend would you like to use? [$(echo $backends)]"
+  echo "Which backend would you like to use? [$(echo $environments)]"
     read -p "> " backend
   echo
 fi
 
-ln -sf ".fenna/backends/${backend}.tfvars" .fenna/backend
+ln -sf ".fenna/backends/${backend}.tfvars" .fenna/backend/current
+
+echo "Where is your backend stored? [$(echo $environments)]"
+  read -p "> " backend_env
+echo
+
+echo $backend_env > .fenna/backend/env
+
 echo "user.tfvars" >> .gitignore
 
 # fenna onboard
