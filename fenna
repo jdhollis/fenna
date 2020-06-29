@@ -194,7 +194,7 @@ plan () {
       -var "root_profile=${root_profile}" \
       -var "service_name=${service_name}" \
       -var "suffix=${suffix}" \
-      -var-file "${sandbox_env}.tfvars"
+      -var-file "${sandbox_env}.tfvars" \
       -var-file "user.tfvars" \
       -out "plan" \
       ${@-}
