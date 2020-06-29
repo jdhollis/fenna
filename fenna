@@ -101,7 +101,7 @@ EOS
   echo
 
   local backend
-  local environments=$(ls -1 .fenna/backends | sed -e 's/\.tfvars$//')
+  local environments=$(ls -1 .fenna/backends | grep ".tfvars" | sed -e 's/\.tfvars$//')
 
   if [[ $is_sandboxable == "yes" ]]
   then
