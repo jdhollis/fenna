@@ -67,6 +67,22 @@ EOS
 
   echo $service_name > .fenna/service_name
 
+  cat > fenna_variables.tf <<EOS
+variable "assume_role_arn" {
+  default = ""
+}
+
+variable "profile" {
+  default = ""
+}
+
+variable "root_profile" {
+  default = ""
+}
+
+variable "service_name" {}
+EOS
+
   if [[ ! -d ".fenna/backends" ]]
   then
     local repository_url
@@ -96,7 +112,15 @@ EOS
 
     backend=$sandbox_env
     echo $sandbox_env > .fenna/sandbox
+
     echo "user.tfvars" >> .gitignore
+
+    cat <<EOS >> fenna_variables.tf
+
+variable "suffix" {
+  default = ""
+}
+EOS
   else
     rm -f .fenna/sandbox
 
