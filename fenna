@@ -144,6 +144,8 @@ init () {
 
 plan () {
   local profile=$(cat .fenna/profile)
+  local root_profile=$(cat .fenna/root_profile)
+  local service_name=$(cat .fenna/service_name)
 
   if [[ -f ".fenna/sandbox" ]]
   then
@@ -157,6 +159,8 @@ plan () {
 
     terraform plan \
       -var "profile=${profile}" \
+      -var "root_profile=${root_profile}" \
+      -var "service_name=${service_name}" \
       -var "suffix=${suffix}" \
       -var-file "${sandbox_env}.tfvars"
       -var-file "user.tfvars" \
@@ -165,6 +169,8 @@ plan () {
   else
     terraform plan \
       -var "profile=${profile}" \
+      -var "root_profile=${root_profile}" \
+      -var "service_name=${service_name}" \
       -out "plan" \
       ${@-}
   fi
