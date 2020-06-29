@@ -40,7 +40,7 @@ onboard () {
     touch "${sandbox_env}.tfvars"
     touch user.tfvars
   else
-    local target_env=$(readlink .fenna/backend/current | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+    local target_env=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
     profile=$(profile_name_for $root_profile $target_env)
   fi
 
@@ -137,7 +137,7 @@ EOS
     echo
   fi
 
-  ln -sf "../backends/${backend}.tfvars" .fenna/backend/current
+  ln -sf "../backends/${backend}.tfvars" .fenna/backend/current.tfvars
 
   local backend_env
 
@@ -162,13 +162,13 @@ init () {
   if [[ -f ".fenna/sandbox" ]] && [[ ! -z "$suffix" ]]
   then
     terraform init \
-      -backend-config .fenna/backend/current \
+      -backend-config .fenna/backend/current.tfvars \
       -backend-config "profile=${backend_profile}" \
       -backend-config "key=$(cat .fenna/service_name)-${suffix}/terraform.tfstate" \
       ${@-}
   else
     terraform init \
-      -backend-config .fenna/backend/current \
+      -backend-config .fenna/backend/current.tfvars \
       -backend-config "profile=${backend_profile}" \
       ${@-}
   fi
