@@ -55,6 +55,7 @@ bootstrap () {
 
   cat > .fenna/.gitignore <<EOS
 backend/profile
+profile
 root_profile
 suffix
 EOS
