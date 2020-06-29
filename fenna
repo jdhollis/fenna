@@ -84,6 +84,12 @@ variable "root_profile" {
 variable "service_name" {}
 EOS
 
+  cat <<EOS >> .gitignore
+*.tfstate*
+.terraform
+plan
+EOS
+
   if [[ ! -d ".fenna/backends" ]]
   then
     local repository_url
