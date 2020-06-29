@@ -99,6 +99,7 @@ EOS
     echo
 
     git submodule add $repository_url .fenna/backends
+    echo
   fi
 
   local is_sandboxable
