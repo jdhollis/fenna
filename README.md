@@ -46,7 +46,7 @@ Dependence on AWS profiles is probably the single biggest blocker to supporting 
 
 `fenna` assumes profile names will follow this convention: `[root profile]-[env]`.
 
-For example, here is a sample AWS configuration with `ops` as the `root` profile—
+For example, here is a sample AWS configuration with `ops` as the `root` profile:
 
 #### `~/.aws/credentials`
 
@@ -94,9 +94,18 @@ encrypt        = true
 kms_key_id     = ""
 ```
 
+Now you only need a minimal `terraform` block:
+
+```hcl
+terraform {
+  required_version = "~> 0.12"
+  backend "s3" {}
+}
+```
+
 ## Installation
 
-If you're using [Homebrew](https://brew.sh)—
+If you're using [Homebrew](https://brew.sh):
 
 ```bash
 brew tap jdhollis/fenna
@@ -153,3 +162,29 @@ Or:
 fenna plan -destroy
 fenna apply
 ```
+
+`init` injects the necessary backend details into `terraform` including `profile` and `key` (with an appended `suffix` if targeting a sandbox).
+
+`plan` injects `profile`, `root_profile`, `service_name`, and `suffix` into `terraform`. When targeting a sandbox, it also injects a `tfvars` file for that environment (e.g., `dev.tfvars`) and a `user.tfvars` for developer-specific overrides.
+
+`apply` just applies the plan.
+
+## CI/CD
+
+`fenna` is intended for local usage, but we always want to use identical HCL across all environments whenever possible.
+
+There is an `assume_role_arn` variable that can be added to your `provider` blocks for injecting the proper role ARN during an automated build:
+
+```hcl
+provider "aws" {
+  version = "~> 2.68"
+  region  = var.region
+  profile = var.profile
+
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
+}
+```
+
+In CI/CD, you'll also need to handle injecting the backend details.
