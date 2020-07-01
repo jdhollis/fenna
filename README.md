@@ -16,7 +16,7 @@ Currently, `fenna` only supports AWS and Git.
 
 ### Service
 
-[A service is a collection of AWS resources and code that fulfills a desired function. It has a well-defined interface that other services and users can interact with. And it is something we want to deploy and test as a unit.](https://theconsultingcto.com/posts/continuous-delivery-with-terraform/#services)
+A service is a collection of AWS resources and code that fulfills a desired function. It has a well-defined interface that other services and users can interact with. And it is something we want to deploy and test as a unit.
 
 ### Environment
 
