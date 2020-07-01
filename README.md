@@ -121,7 +121,7 @@ Commit any changed files to the repo—this will serve as the base configuration
 
 ### `onboard`
 
-When a developer first starts working on a service for the first time, they need to run the following from the service’s root module:
+When a developer starts working on a service for the first time, they need to run the following from the service’s root module:
 
 ```bash
 fenna onboard
