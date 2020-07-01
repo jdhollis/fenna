@@ -94,6 +94,17 @@ encrypt        = true
 kms_key_id     = ""
 ```
 
+## Installation
+
+If you're using [Homebrew](https://brew.sh)—
+
+```bash
+brew tap jdhollis/fenna
+brew install fenna
+```
+
+Alternatively, you can [download the `fenna` script](https://raw.githubusercontent.com/jdhollis/fenna/master/fenna) and drop it somewhere in your `PATH`.
+
 ## Usage
 
 ### `bootstrap`
