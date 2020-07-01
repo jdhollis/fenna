@@ -170,6 +170,7 @@ init () {
     terraform init \
       -backend-config .fenna/backend/current.tfvars \
       -backend-config "profile=${backend_profile}" \
+      -backend-config "key=$(cat .fenna/service_name)/terraform.tfstate" \
       ${@-}
   fi
 }
