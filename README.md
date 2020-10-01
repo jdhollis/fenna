@@ -6,6 +6,8 @@ With `fenna`, developers can develop against their own instances of a [service](
 
 For a longer discussion of the motivations behind `fenna`, check out my post “[Terraform for Teams](https://theconsultingcto.com/posts/terraform-for-teams)”.
 
+For an in-depth example of bootstrapping a multi-account setup with AWS, check out “[How to Bootstrap Multiple Environments on AWS with Terraform & Fenna](https://theconsultingcto.com/posts/how-to-bootstrap-multiple-environments-on-aws-with-terraform-and-fenna/)”.
+
 This documentation assumes familiarity with the basics of Terraform, so if you’re new to Terraform, you’ll want to start [here](https://learn.hashicorp.com/terraform).
 
 Currently, `fenna` only supports AWS and Git.
