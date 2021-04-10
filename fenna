@@ -128,6 +128,10 @@ EOS
 variable "suffix" {
   default = ""
 }
+
+locals {
+  suffix = var.suffix == "" ? "" : "-\${var.suffix}"
+}
 EOS
   else
     rm -f .fenna/sandbox

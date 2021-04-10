@@ -34,6 +34,8 @@ To prevent name collisions in a [sandbox](#sandbox), a developer can configure a
 
 Should developers need to collaborate on the same sandbox infrastructure, they need only set the same `suffix`.
 
+To simplify usage of the `suffix` within your HCL (and automatically handle a blank `suffix`), use `local.suffix` instead of `var.suffix`.
+
 ### Root
 
 The `root` [environment](#environment) is where access control to the other environments is managed. Similarly, a developer’s `root` [profile](#profiles) holds the credentials for accessing the `root` environment.
