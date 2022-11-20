@@ -214,7 +214,7 @@ plan () {
 }
 
 apply () {
-  terraform apply ${@-} "plan"
+  terraform apply ${@-} "plan" && rm "plan"
 }
 
 cmd="$1"
