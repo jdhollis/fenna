@@ -300,6 +300,9 @@ targets/**/suffix
 root_profile
 EOS
 
+  touch "${target}.tfvars"
+  touch user.tfvars
+
   v2_set_target $target
 }
 
