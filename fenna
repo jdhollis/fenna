@@ -290,11 +290,11 @@ v2_migrate () {
   rm .fenna/.gitignore
 
   cat > .fenna/.gitignore <<EOS
-.fenna/target
-.fenna/targets/**/.terraform
-.fenna/targets/**/backend/profile
-.fenna/targets/**/profile
-.fenna/targets/**/suffix
+target
+targets/**/.terraform
+targets/**/backend/profile
+targets/**/profile
+targets/**/suffix
 root_profile
 EOS
 
@@ -403,11 +403,11 @@ v2_bootstrap () {
   echo "2" > .fenna/version
 
   cat > .fenna/.gitignore <<EOS
-.fenna/target
-.fenna/targets/**/.terraform
-.fenna/targets/**/backend/profile
-.fenna/targets/**/profile
-.fenna/targets/**/suffix
+target
+targets/**/.terraform
+targets/**/backend/profile
+targets/**/profile
+targets/**/suffix
 root_profile
 EOS
 
