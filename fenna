@@ -253,6 +253,8 @@ v2_set_target () {
 v2_migrate () {
   cp -R .fenna .fenna-bak
 
+  echo "2" > .fenna/version
+
   local backend=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
   rm .fenna/backend/current.tfvars
 
