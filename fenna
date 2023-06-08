@@ -244,8 +244,8 @@ v2_targets () {
 v2_set_target () {
   local name=$1
 
-  ln -sf "targets/$name" .fenna/target
-  ln -sf ".fenna/targets/$name/.terraform" .terraform
+  ln -sf "targets/${name}" .fenna/target
+  ln -sf ".fenna/targets/${name}/.terraform" .terraform
 
   echo $name
   echo
@@ -255,15 +255,15 @@ v2_configure_target () {
   local name="$1"
 
   local root_profile=$(cat .fenna/root_profile)
-  local backend_env=$(cat .fenna/targets/$name/backend/env)
+  local backend_env=$(cat ".fenna/targets/${name}/backend/env")
   local backend_profile=$(profile_name_for $root_profile $backend_env)
 
-  echo $backend_profile > ".fenna/targets/$name/backend/profile"
+  echo $backend_profile > ".fenna/targets/${name}/backend/profile"
 
-  local target_env=$(readlink ".fenna/targets/$name/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  local target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
   local profile=$(profile_name_for $root_profile $target_env)
 
-  echo $profile > ".fenna/targets/$name/profile"
+  echo $profile > ".fenna/targets/${name}/profile"
 
   local suffix
 
@@ -273,16 +273,16 @@ v2_configure_target () {
 
   if [[ ! -z "$suffix" ]]
   then
-    echo $suffix > ".fenna/targets/$name/suffix"
+    echo $suffix > ".fenna/targets/${name}/suffix"
   fi
 }
 
 v2_target () {
   local name="$1"
 
-  if [[ -d ".fenna/targets/$name" ]]
+  if [[ -d ".fenna/targets/${name}" ]]
   then
-    if [[ -f ".fenna/targets/$name/profile" ]] && [[ -f ".fenna/targets/$name/backend/profile" ]]
+    if [[ -f ".fenna/targets/${name}/profile" ]] && [[ -f ".fenna/targets/${name}/backend/profile" ]]
     then
       v2_set_target $name
     else
@@ -290,24 +290,24 @@ v2_target () {
       v2_set_target $name
     fi
   else
-    mkdir -p ".fenna/targets/$name/backend"
+    mkdir -p ".fenna/targets/${name}/backend"
 
     local environments=$(v2_backends)
     local backend
 
-    echo "Which backend would you like to use? [$environments]"
+    echo "Which backend would you like to use? [${environments}]"
       read -p "> " backend
     echo
 
-    ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/$name/backend/config.tfvars"
+    ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/${name}/backend/config.tfvars"
 
     local backend_env
 
-    echo "Where is your backend stored? [$(echo $environments)]"
+    echo "Where is your backend stored? [${environments}]"
       read -p "> " backend_env
     echo
 
-    echo $backend_env > ".fenna/targets/$name/backend/env"
+    echo $backend_env > ".fenna/targets/${name}/backend/env"
 
     touch "${name}.tfvars"
 
@@ -333,7 +333,7 @@ v2_onboard () {
   then
     local target
 
-    echo "Which target would you like to use? [$targets]"
+    echo "Which target would you like to use? [${targets}]"
       read -p "> " target
     echo
 
@@ -428,7 +428,7 @@ v2_init () {
 
   if [[ ! -z "$suffix" ]]
   then
-    state_key_root="$state_key_root-$suffix"
+    state_key_root="${state_key_root}-${suffix}"
   fi
 
   terraform init \
