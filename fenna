@@ -497,7 +497,7 @@ v2_plan () {
   local profile=$(cat .fenna/target/profile)
   local root_profile=$(cat .fenna/root_profile)
   local service_name=$(cat .fenna/service_name)
-  local target=$(readlink .fenna/target | sed -e 's/targets\/\(.+\)/\1/')
+  local target=$(readlink .fenna/target | sed -e 's/targets\/\(.*\)/\1/')
 
   local suffix
 
