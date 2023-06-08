@@ -271,7 +271,7 @@ v2_migrate () {
   mv .fenna/profile ".fenna/targets/${target}/profile"
 
   mv .fenna/backend ".fenna/targets/${target}/backend"
-  ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/${target}/backend/config.tfvars"
+  ln -sf "../../../backends/${backend}.tfvars" ".fenna/targets/${target}/backend/config.tfvars"
 
   if [[ -f ".fenna/suffix" ]]
   then
@@ -304,7 +304,7 @@ v2_configure_target () {
 
   echo $backend_profile > ".fenna/targets/${name}/backend/profile"
 
-  local target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  local target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
   local profile=$(profile_name_for $root_profile $target_env)
 
   echo $profile > ".fenna/targets/${name}/profile"
@@ -343,7 +343,7 @@ v2_target () {
       read -p "> " backend
     echo
 
-    ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/${name}/backend/config.tfvars"
+    ln -sf "../../../backends/${backend}.tfvars" ".fenna/targets/${name}/backend/config.tfvars"
 
     local backend_env
 
