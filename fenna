@@ -269,7 +269,7 @@ v2_configure_target () {
 
   echo $backend_profile > ".fenna/targets/$name/backend/profile"
 
-  local target_env=$(readlink .fenna/targets/$name/backend/current.tfvars | sed -e 's/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  local target_env=$(readlink ".fenna/targets/$name/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
   local profile=$(profile_name_for $root_profile $target_env)
 
   echo $profile > ".fenna/targets/$name/profile"
@@ -308,7 +308,7 @@ v2_target () {
       read -p "> " backend
     echo
 
-    ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/$name/backend/current.tfvars"
+    ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/$name/backend/config.tfvars"
 
     local backend_env
 
