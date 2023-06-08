@@ -300,6 +300,32 @@ targets/**/suffix
 root_profile
 EOS
 
+  rm -f fenna_variables.tf
+
+  cat > fenna_variables.tf <<EOS
+variable "assume_role_arn" {
+  default = ""
+}
+
+variable "profile" {
+  default = ""
+}
+
+variable "root_profile" {
+  default = ""
+}
+
+variable "service_name" {}
+
+variable "suffix" {
+  default = ""
+}
+
+locals {
+  suffix = var.suffix == "" ? "" : "-\${var.suffix}"
+}
+EOS
+
   touch "${target}.tfvars"
   touch user.tfvars
 
