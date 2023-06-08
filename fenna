@@ -11,6 +11,10 @@ profile_name_for () {
   fi
 }
 
+apply () {
+  terraform apply ${@-} "plan" && rm "plan"
+}
+
 #
 # V1
 #
@@ -215,10 +219,6 @@ plan () {
       -out "plan" \
       ${@-}
   fi
-}
-
-apply () {
-  terraform apply ${@-} "plan" && rm "plan"
 }
 
 cmd="$1"
