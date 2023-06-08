@@ -15,6 +15,7 @@ apply () {
   terraform apply ${@-} "plan" && rm "plan"
 }
 
+
 #
 # V1
 #
@@ -220,16 +221,6 @@ plan () {
       ${@-}
   fi
 }
-
-cmd="$1"
-shift
-case "$cmd" in
-  bootstrap) bootstrap ;;
-  onboard) onboard ;;
-  init) init "$@" ;;
-  plan) plan "$@" ;;
-  apply) apply "$@" ;;
-esac
 
 
 #
@@ -470,3 +461,33 @@ v2_plan () {
     -out "plan" \
     ${@-}
 }
+
+
+#
+# Dispatch
+#
+
+cmd="$1"
+shift
+
+if [[ -f ".fenna/version" ]]
+then
+  case "$cmd" in
+    bootstrap) v2_bootstrap ;;
+    backends) v2_backends ;;
+    targets) v2_targets ;;
+    onboard) v2_onboard ;;
+    target) v2_target "$1" ;;
+    init) v2_init "$@" ;;
+    plan) v2_plan "$@" ;;
+    apply) apply "$@" ;;
+  esac
+else
+  case "$cmd" in
+    bootstrap) bootstrap ;;
+    onboard) onboard ;;
+    init) init "$@" ;;
+    plan) plan "$@" ;;
+    apply) apply "$@" ;;
+  esac
+fi
