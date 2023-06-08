@@ -423,3 +423,50 @@ EOS
 
   v2_onboard
 }
+
+v2_init () {
+  local backend_profile=$(cat .fenna/target/backend/profile)
+  local suffix
+
+  if [[ -f ".fenna/target/suffix" ]]
+  then
+    suffix=$(cat .fenna/target/suffix)
+  fi
+
+  local state_key_root=$(cat .fenna/service_name)
+
+  if [[ ! -z "$suffix" ]]
+  then
+    state_key_root="$state_key_root-$suffix"
+  fi
+
+  terraform init \
+    -backend-config .fenna/target/backend/config.tfvars \
+    -backend-config "profile=${backend_profile}" \
+    -backend-config "key=${state_key_root}/terraform.tfstate" \
+    ${@-}
+}
+
+v2_plan () {
+  local profile=$(cat .fenna/target/profile)
+  local root_profile=$(cat .fenna/root_profile)
+  local service_name=$(cat .fenna/service_name)
+  local target=$(readlink .fenna/target | sed -e 's/targets\/\(.+\)/\1/')
+
+  local suffix
+
+  if [[ -f ".fenna/target/suffix" ]]
+  then
+    suffix=$(cat .fenna/target/suffix)
+  fi
+
+  terraform plan \
+    -var "profile=${profile}" \
+    -var "root_profile=${root_profile}" \
+    -var "service_name=${service_name}" \
+    -var "suffix=${suffix}" \
+    -var-file "${target}.tfvars" \
+    -var-file "user.tfvars" \
+    -out "plan" \
+    ${@-}
+}
