@@ -248,7 +248,6 @@ v2_set_target () {
   ln -sf ".fenna/targets/${name}/.terraform" .terraform
 
   echo $name
-  echo
 }
 
 v2_migrate () {
