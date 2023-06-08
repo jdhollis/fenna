@@ -275,7 +275,14 @@ v2_migrate () {
 
   if [[ -f ".fenna/suffix" ]]
   then
-    mv .fenna/suffix ".fenna/targets/${target}/suffix"
+    local suffix=$(cat .fenna/suffix)
+
+    if [[ -z "$suffix" ]]
+    then
+      rm .fenna/suffix
+    else
+      mv .fenna/suffix ".fenna/targets/${target}/suffix"
+    fi
   fi
 
   cp -R .terraform .terraform-bak
