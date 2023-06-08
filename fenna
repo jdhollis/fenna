@@ -251,6 +251,50 @@ v2_set_target () {
   echo
 }
 
+v2_migrate () {
+  cp -R .fenna .fenna-bak
+
+  local backend=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  rm .fenna/backend/current.tfvars
+
+  local target
+
+  if [[ -f ".fenna/sandbox" ]]
+  then
+    target=$(cat .fenna/sandbox)
+    rm .fenna/sandbox
+  else
+    target="${backend}"
+  fi
+
+  mkdir -p ".fenna/targets/${target}"
+  mv .fenna/profile ".fenna/targets/${target}/profile"
+
+  mv .fenna/backend ".fenna/targets/${target}/backend"
+  ln -sf "../../backends/${backend}.tfvars" ".fenna/targets/${target}/backend/config.tfvars"
+
+  if [[ -f ".fenna/suffix" ]]
+  then
+    mv .fenna/suffix ".fenna/targets/${target}/suffix"
+  fi
+
+  cp -R .terraform .terraform-bak
+  mv .terraform ".fenna/targets/${target}/.terraform"
+
+  rm .fenna/.gitignore
+
+  cat > .fenna/.gitignore <<EOS
+.fenna/target
+.fenna/targets/**/.terraform
+.fenna/targets/**/backend/profile
+.fenna/targets/**/profile
+.fenna/targets/**/suffix
+root_profile
+EOS
+
+  v2_set_target $target
+}
+
 v2_configure_target () {
   local name="$1"
 
@@ -484,6 +528,7 @@ then
   esac
 else
   case "$cmd" in
+    migrate) v2_migrate ;;
     bootstrap) bootstrap ;;
     onboard) onboard ;;
     init) init "$@" ;;
