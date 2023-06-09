@@ -375,6 +375,7 @@ v2_target () {
     fi
   else
     mkdir -p ".fenna/targets/${name}/backend"
+    mkdir ".fenna/targets/${name}/.terraform"
 
     local environments=$(v2_backends)
     local backend
