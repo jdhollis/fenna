@@ -244,7 +244,10 @@ v2_targets () {
 v2_set_target () {
   local name=$1
 
+  rm -f .fenna/target
   ln -sf "targets/${name}" .fenna/target
+
+  rm -f .terraform
   ln -sf ".fenna/targets/${name}/.terraform" .terraform
 
   echo $name
