@@ -376,7 +376,7 @@ v2_target () {
     local environments=$(v2_backends)
     local backend
 
-    echo "Which backend would you like to use? [${environments}]"
+    echo "Which backend would you like to use? [$(echo $environments)]"
       read -p "> " backend
     echo
 
@@ -384,7 +384,7 @@ v2_target () {
 
     local backend_env
 
-    echo "Where is your backend stored? [${environments}]"
+    echo "Where is your backend stored? [$(echo $environments)]"
       read -p "> " backend_env
     echo
 
@@ -414,7 +414,7 @@ v2_onboard () {
   then
     local target
 
-    echo "Which target would you like to use? [${targets}]"
+    echo "Which target would you like to use? [$(echo $targets)]"
       read -p "> " target
     echo
 
