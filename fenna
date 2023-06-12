@@ -558,7 +558,6 @@ shift
 if [[ -f ".fenna/version" ]]
 then
   case "$cmd" in
-    bootstrap) v2_bootstrap ;;
     backends) v2_backends ;;
     targets) v2_targets ;;
     onboard) v2_onboard ;;
@@ -570,7 +569,7 @@ then
 else
   case "$cmd" in
     migrate) v2_migrate ;;
-    bootstrap) bootstrap ;;
+    bootstrap) v2_bootstrap ;;
     onboard) onboard ;;
     init) init "$@" ;;
     plan) plan "$@" ;;
