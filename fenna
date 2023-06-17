@@ -223,7 +223,12 @@ locals {
 EOS
 
   touch "${target}.tfvars"
-  touch user.tfvars
+
+  cat <<EOS >> .gitignore
+*.sensitive.tfvars
+EOS
+
+  touch "${target}.sensitive.tfvars"
 
   v2_set_target $target
 }
@@ -288,6 +293,7 @@ v2_target () {
     echo $backend_env > ".fenna/targets/${name}/backend/env"
 
     touch "${name}.tfvars"
+    touch "${name}.sensitive.tfvars"
 
     v2_configure_target $name
     v2_set_target $name
@@ -309,6 +315,11 @@ v2_onboard () {
 
   if [[ ! -z "$targets" ]]
   then
+    for t in "${targets[@]}"
+    do
+      touch "${t}.sensitive.tfvars"
+    done
+
     local target
 
     echo "Which target would you like to use? [$(echo $targets)]"
@@ -375,6 +386,7 @@ EOS
 *.tfstate*
 .terraform
 plan
+*.sensitive.tfvars
 user.tfvars
 EOS
 
@@ -435,6 +447,7 @@ v2_plan () {
     -var "service_name=${service_name}" \
     -var "suffix=${suffix}" \
     -var-file "${target}.tfvars" \
+    -var-file "${target}.sensitive.tfvars" \
     -var-file "user.tfvars" \
     -out "plan" \
     ${@-}
