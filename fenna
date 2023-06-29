@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
 
 profile_name_for () {
-  local root_profile="$1" target_env="$2"
+  local root_profile="$1" env="$2"
 
-  if [[ $target_env == "root" ]]
+  if [[ $env == "root" ]]
   then
     echo "$root_profile"
   else
-    echo "${root_profile}-${target_env}"
+    echo "${root_profile}-${env}"
   fi
 }
+
+apply () {
+  terraform apply ${@-} "plan" && rm "plan"
+}
+
+
+#
+# V1
+#
 
 onboard () {
   local root_profile profile
@@ -45,113 +54,6 @@ onboard () {
   fi
 
   echo $profile > .fenna/profile
-}
-
-bootstrap () {
-  if [[ ! -d ".fenna" ]]
-  then
-    mkdir -p .fenna/backend
-  fi
-
-  cat > .fenna/.gitignore <<EOS
-backend/profile
-profile
-root_profile
-suffix
-EOS
-
-  local service_name
-
-  echo "What is this service named?"
-    read -p "> " service_name
-  echo
-
-  echo $service_name > .fenna/service_name
-
-  cat > fenna_variables.tf <<EOS
-variable "assume_role_arn" {
-  default = ""
-}
-
-variable "profile" {
-  default = ""
-}
-
-variable "root_profile" {
-  default = ""
-}
-
-variable "service_name" {}
-EOS
-
-  cat <<EOS >> .gitignore
-*.tfstate*
-.terraform
-plan
-EOS
-
-  if [[ ! -d ".fenna/backends" ]]
-  then
-    local repository_url
-
-    echo "What's your backend config repository's URL?"
-      read -p "> " repository_url
-    echo
-
-    git submodule add $repository_url ./.fenna/backends
-    echo
-  fi
-
-  local is_sandboxable
-
-  echo "Will this service be developed in a sandbox? [yes no]"
-    read -p "> " is_sandboxable
-  echo
-
-  local backend
-  local environments=$(ls -1 .fenna/backends | grep ".tfvars" | sed -e 's/\.tfvars$//')
-
-  if [[ $is_sandboxable == "yes" ]]
-  then
-    local sandbox_env
-    echo "What is the sandbox environment named? [$(echo $environments)]"
-      read -p "> " sandbox_env
-    echo
-
-    backend=$sandbox_env
-    echo $sandbox_env > .fenna/sandbox
-
-    echo "user.tfvars" >> .gitignore
-
-    cat <<EOS >> fenna_variables.tf
-
-variable "suffix" {
-  default = ""
-}
-
-locals {
-  suffix = var.suffix == "" ? "" : "-\${var.suffix}"
-}
-EOS
-  else
-    rm -f .fenna/sandbox
-
-    echo "Which backend would you like to use? [$(echo $environments)]"
-      read -p "> " backend
-    echo
-  fi
-
-  ln -sf "../backends/${backend}.tfvars" .fenna/backend/current.tfvars
-
-  local backend_env
-
-  echo "Where is your backend stored? [$(echo $environments)]"
-    read -p "> " backend_env
-  echo
-
-  echo $backend_env > .fenna/backend/env
-
-  onboard
 }
 
 init () {
@@ -213,16 +115,370 @@ plan () {
   fi
 }
 
-apply () {
-  terraform apply ${@-} "plan" && rm "plan"
+
+#
+# V2
+#
+
+v2_backends () {
+  if [[ -d ".fenna/backends" ]]
+  then
+    ls -1 .fenna/backends | grep ".tfvars" | sed -e 's/\.tfvars$//'
+  fi
 }
+
+v2_targets () {
+  if [[ -d ".fenna/targets" ]]
+  then
+    ls -1 .fenna/targets
+  fi
+}
+
+v2_set_target () {
+  local name=$1
+
+  rm -f .fenna/target
+  ln -sf "targets/${name}" .fenna/target
+
+  rm -f .terraform
+  ln -sf ".fenna/targets/${name}/.terraform" .terraform
+
+  echo $name
+}
+
+v2_migrate () {
+  cp -R .fenna .fenna-bak
+
+  echo "2" > .fenna/version
+
+  local backend=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  rm .fenna/backend/current.tfvars
+
+  local target
+
+  if [[ -f ".fenna/sandbox" ]]
+  then
+    target=$(cat .fenna/sandbox)
+    rm .fenna/sandbox
+  else
+    target="${backend}"
+  fi
+
+  mkdir -p ".fenna/targets/${target}"
+  mv .fenna/profile ".fenna/targets/${target}/profile"
+
+  mv .fenna/backend ".fenna/targets/${target}/backend"
+  ln -sf "../../../backends/${backend}.tfvars" ".fenna/targets/${target}/backend/config.tfvars"
+
+  if [[ -f ".fenna/suffix" ]]
+  then
+    local suffix=$(cat .fenna/suffix)
+
+    if [[ -z "$suffix" ]]
+    then
+      rm .fenna/suffix
+    else
+      mv .fenna/suffix ".fenna/targets/${target}/suffix"
+    fi
+  fi
+
+  cp -R .terraform .terraform-bak
+  mv .terraform ".fenna/targets/${target}/.terraform"
+
+  rm .fenna/.gitignore
+
+  cat > .fenna/.gitignore <<EOS
+target
+targets/**/.terraform
+targets/**/backend/profile
+targets/**/profile
+targets/**/suffix
+root_profile
+EOS
+
+  rm -f fenna_variables.tf
+
+  cat > fenna_variables.tf <<EOS
+variable "assume_role_arn" {
+  default = ""
+}
+
+variable "profile" {
+  default = ""
+}
+
+variable "root_profile" {
+  default = ""
+}
+
+variable "service_name" {}
+
+variable "suffix" {
+  default = ""
+}
+
+locals {
+  suffix = var.suffix == "" ? "" : "-\${var.suffix}"
+}
+EOS
+
+  touch "${target}.tfvars"
+
+  cat <<EOS >> .gitignore
+*.sensitive.tfvars
+EOS
+
+  touch "${target}.sensitive.tfvars"
+
+  v2_set_target $target
+}
+
+v2_configure_target () {
+  local name="$1"
+
+  local root_profile=$(cat .fenna/root_profile)
+  local backend_env=$(cat ".fenna/targets/${name}/backend/env")
+  local backend_profile=$(profile_name_for $root_profile $backend_env)
+
+  echo $backend_profile > ".fenna/targets/${name}/backend/profile"
+
+  local target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  local profile=$(profile_name_for $root_profile $target_env)
+
+  echo $profile > ".fenna/targets/${name}/profile"
+
+  local suffix
+
+  echo "What suffix would you like to use to distinguish your state and resources within this target?"
+    read -p "> " suffix
+  echo
+
+  if [[ ! -z "$suffix" ]]
+  then
+    echo $suffix > ".fenna/targets/${name}/suffix"
+  fi
+}
+
+v2_target () {
+  local name="$1"
+
+  if [[ -d ".fenna/targets/${name}" ]]
+  then
+    if [[ -f ".fenna/targets/${name}/profile" ]] && [[ -f ".fenna/targets/${name}/backend/profile" ]]
+    then
+      v2_set_target $name
+    else
+      v2_configure_target $name
+      v2_set_target $name
+    fi
+  else
+    mkdir -p ".fenna/targets/${name}/backend"
+    mkdir ".fenna/targets/${name}/.terraform"
+
+    local environments=$(v2_backends)
+    local backend
+
+    echo "Which backend would you like to use? [$(echo $environments)]"
+      read -p "> " backend
+    echo
+
+    ln -sf "../../../backends/${backend}.tfvars" ".fenna/targets/${name}/backend/config.tfvars"
+
+    local backend_env
+
+    echo "Where is your backend stored? [$(echo $environments)]"
+      read -p "> " backend_env
+    echo
+
+    echo $backend_env > ".fenna/targets/${name}/backend/env"
+
+    touch "${name}.tfvars"
+    touch "${name}.sensitive.tfvars"
+
+    v2_configure_target $name
+    v2_set_target $name
+  fi
+}
+
+v2_onboard () {
+  local root_profile
+
+  echo "What AWS profile would you like to use as your root profile?"
+    read -p "> " root_profile
+  echo
+
+  echo $root_profile > .fenna/root_profile
+
+  touch user.tfvars
+
+  local targets=$(v2_targets)
+
+  if [[ ! -z "$targets" ]]
+  then
+    for t in "${targets[@]}"
+    do
+      touch "${t}.sensitive.tfvars"
+    done
+
+    local target
+
+    echo "Which target would you like to use? [$(echo $targets)]"
+      read -p "> " target
+    echo
+
+    if [[ ! -z "$target" ]]
+    then
+      v2_target $target
+    fi
+  fi
+}
+
+v2_bootstrap () {
+  if [[ ! -d ".fenna" ]]
+  then
+    mkdir -p .fenna/targets
+  fi
+
+  echo "2" > .fenna/version
+
+  cat > .fenna/.gitignore <<EOS
+target
+targets/**/.terraform
+targets/**/backend/profile
+targets/**/profile
+targets/**/suffix
+root_profile
+EOS
+
+  local service_name
+
+  echo "What is this service named?"
+    read -p "> " service_name
+  echo
+
+  echo $service_name > .fenna/service_name
+
+  cat > fenna_variables.tf <<EOS
+variable "assume_role_arn" {
+  default = ""
+}
+
+variable "profile" {
+  default = ""
+}
+
+variable "root_profile" {
+  default = ""
+}
+
+variable "service_name" {}
+
+variable "suffix" {
+  default = ""
+}
+
+locals {
+  suffix = var.suffix == "" ? "" : "-\${var.suffix}"
+}
+EOS
+
+  cat <<EOS >> .gitignore
+*.tfstate*
+.terraform
+plan
+*.sensitive.tfvars
+user.tfvars
+EOS
+
+  if [[ ! -d ".fenna/backends" ]]
+  then
+    local repository_url
+
+    echo "What's your backend config repository's URL?"
+      read -p "> " repository_url
+    echo
+
+    git submodule add $repository_url .fenna/backends
+    echo
+  fi
+
+  v2_onboard
+}
+
+v2_init () {
+  local backend_profile=$(cat .fenna/target/backend/profile)
+  local suffix
+
+  if [[ -f ".fenna/target/suffix" ]]
+  then
+    suffix=$(cat .fenna/target/suffix)
+  fi
+
+  local state_key_root=$(cat .fenna/service_name)
+
+  if [[ ! -z "$suffix" ]]
+  then
+    state_key_root="${state_key_root}-${suffix}"
+  fi
+
+  terraform init \
+    -backend-config .fenna/target/backend/config.tfvars \
+    -backend-config "profile=${backend_profile}" \
+    -backend-config "key=${state_key_root}/terraform.tfstate" \
+    ${@-}
+}
+
+v2_plan () {
+  local profile=$(cat .fenna/target/profile)
+  local root_profile=$(cat .fenna/root_profile)
+  local service_name=$(cat .fenna/service_name)
+  local target=$(readlink .fenna/target | sed -e 's/targets\/\(.*\)/\1/')
+
+  local suffix
+
+  if [[ -f ".fenna/target/suffix" ]]
+  then
+    suffix=$(cat .fenna/target/suffix)
+  fi
+
+  terraform plan \
+    -var "profile=${profile}" \
+    -var "root_profile=${root_profile}" \
+    -var "service_name=${service_name}" \
+    -var "suffix=${suffix}" \
+    -var-file "${target}.tfvars" \
+    -var-file "${target}.sensitive.tfvars" \
+    -var-file "user.tfvars" \
+    -out "plan" \
+    ${@-}
+}
+
+
+#
+# Dispatch
+#
 
 cmd="$1"
 shift
-case "$cmd" in
-  bootstrap) bootstrap ;;
-  onboard) onboard ;;
-  init) init "$@" ;;
-  plan) plan "$@" ;;
-  apply) apply "$@" ;;
-esac
+
+if [[ -f ".fenna/version" ]]
+then
+  case "$cmd" in
+    backends) v2_backends ;;
+    targets) v2_targets ;;
+    onboard) v2_onboard ;;
+    target) v2_target "$1" ;;
+    init) v2_init "$@" ;;
+    plan) v2_plan "$@" ;;
+    apply) apply "$@" ;;
+  esac
+else
+  case "$cmd" in
+    migrate) v2_migrate ;;
+    bootstrap) v2_bootstrap ;;
+    onboard) onboard ;;
+    init) init "$@" ;;
+    plan) plan "$@" ;;
+    apply) apply "$@" ;;
+  esac
+fi

@@ -6,11 +6,13 @@ With `fenna`, developers can develop against their own instances of a [service](
 
 For a longer discussion of the motivations behind `fenna`, check out my post “[Terraform for Teams](https://theconsultingcto.com/posts/terraform-for-teams)”.
 
-For an in-depth example of bootstrapping a multi-account setup with AWS, check out “[How to Bootstrap Multiple Environments on AWS with Terraform & Fenna](https://theconsultingcto.com/posts/how-to-bootstrap-multiple-environments-on-aws-with-terraform-and-fenna/)”.
+For an in-depth example of bootstrapping a multi-account setup with AWS using version 1 of `fenna`, check out “[How to Bootstrap Multiple Environments on AWS with Terraform & Fenna](https://theconsultingcto.com/posts/how-to-bootstrap-multiple-environments-on-aws-with-terraform-and-fenna/)”.
 
 This documentation assumes familiarity with the basics of Terraform, so if you’re new to Terraform, you’ll want to start [here](https://learn.hashicorp.com/terraform).
 
 Currently, `fenna` only supports AWS and Git.
+
+You can find the `README` for version 1 of `fenna` [here](https://github.com/jdhollis/fenna/blob/58a0daafd3d649855f91ea7025fab8d76a2f9998/README.md).
 
 ## Conventions
 
@@ -22,19 +24,7 @@ A service is a collection of AWS resources and code that fulfills a desired func
 
 ### Environment
 
-An environment is where we want to deploy a [service](#service). Each environment has a single [backend](https://www.terraform.io/docs/backends/config.html), and each environment is isolated in its own AWS account. An environment’s backend is not typically stored in the environment—instead, we create an environment dedicated to storing things like Terraform state.
-
-### Sandbox
-
-A sandbox is an [environment](#environment) where a developer can safely create their own instance of a service for development and testing.
-
-### Suffix
-
-To prevent name collisions in a [sandbox](#sandbox), a developer can configure a `suffix` that is appended to the service’s [state key](https://www.terraform.io/docs/backends/types/s3.html#key) on `init` and passed into the service’s top-level Terraform module as a variable on every `plan`.
-
-Should developers need to collaborate on the same sandbox infrastructure, they need only set the same `suffix`.
-
-To simplify usage of the `suffix` within your HCL (and automatically handle a blank `suffix`), use `local.suffix` instead of `var.suffix`.
+An environment is where we want to deploy a [service](#service). Each environment has a single [backend](https://www.terraform.io/docs/backends/config.html), and each environment is typically isolated in its own AWS account. An environment’s backend is not typically stored in the environment—instead, we create an environment dedicated to storing things like Terraform state.
 
 ### Root
 
@@ -42,7 +32,7 @@ The `root` [environment](#environment) is where access control to the other envi
 
 Each developer can name their `root` profile anything they like (which comes in handy when, like me, you’re regularly working with more than one team).
 
-### Profiles
+### Profile
 
 `fenna` uses [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to standardize and simplify access to each [environment](#environment).
 
@@ -102,10 +92,32 @@ Now you only need a minimal `terraform` block:
 
 ```hcl
 terraform {
-  required_version = "~> 0.12"
+  required_version = "1.5.0"
+
   backend "s3" {}
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "5.4.0"
+    }
+  }
 }
 ```
+
+### Target
+
+A target is the combination of an [environment](#environment), a [profile](#profile), and, optionally, a [suffix](#suffix).
+
+### Suffix
+
+To prevent name collisions within an [environment](#environment), a developer can configure a `suffix` that is appended to the service’s [state key](https://www.terraform.io/docs/backends/types/s3.html#key) on `init` and passed into the service’s top-level Terraform module as a variable on every `plan`.
+
+Should developers need to collaborate on the same infrastructure, they need only set the same `suffix`.
+
+To simplify usage of the `suffix` within your HCL (and automatically handle a blank `suffix`), use `local.suffix` instead of `var.suffix`.
+
+If you don’t need a suffix, feel free to leave it blank.
 
 ## Installation
 
@@ -118,6 +130,18 @@ brew install fenna
 
 Alternatively, you can [download the `fenna` script](https://raw.githubusercontent.com/jdhollis/fenna/master/fenna) and drop it somewhere in your `PATH`.
 
+### Migrating from Version 1
+
+If you're already using `fenna` and would like to upgrade your services to support targets, run this command from the service root:
+
+```bash
+fenna migrate
+```
+
+This will convert your existing environment or sandbox to a target and reconfigure `fenna` to support the new UI. Backups of `.fenna` and `.terraform` are made in the process (just in case).
+
+If you don't feel like migrating, the v1 UI will continue to work as before.
+
 ## Usage
 
 ### `bootstrap`
@@ -128,7 +152,7 @@ When creating a new service that uses `fenna`, run the following from the servic
 fenna bootstrap
 ```
 
-`fenna` will ask a series of questions to configure the service for everyone. (It will then follow on with the `onboard` process for you.)
+`fenna` will ask a couple of questions to configure the service for everyone. (It will then follow on with the `onboard` process for you.)
 
 Commit any changed files to the repo—this will serve as the base configuration for any developers collaborating on the service in the future.
 
@@ -140,9 +164,33 @@ When a developer starts working on a service for the first time, they need to ru
 fenna onboard
 ```
 
-This will configure the developer’s [`root`](#root) profile and, if necessary, [`suffix`](#suffix).
+This will configure the developer’s [`root`](#root) profile. If [targets](#target) are already configured for the repository, it will also ask which target the developer would like to use and take them through configuration of that target.
 
 The files generated by `fenna onboard` are ignored by Git by default—they are developer-specific and should not be committed to the repository.
+
+### `target`
+
+When you want to use a particular target, run the following from the service’s root module:
+
+```bash
+fenna target [target name]
+```
+
+If the target already exists and is configured for you, it will update the `.fenna/target` and `.terraform` symlinks to point to the chosen target.
+
+If the target does not exist, `fenna` will take you through configuration of that target.
+
+And if the target exists, but you haven't configured it for your own use, `fenna` will take you through that part of the process.
+
+### `backends`, `targets`
+
+```bash
+fenna backends
+fenna targets
+```
+
+These commands simply list the available backends and targets. (You can always use `ls` instead.)
+
 
 ### `init`, `plan`, `apply`
 
@@ -167,9 +215,9 @@ fenna plan -destroy
 fenna apply
 ```
 
-`init` injects the necessary backend details into `terraform` including `profile` and `key` (with an appended `suffix` if targeting a sandbox).
+`init` injects the necessary backend details into `terraform` for the current [target](#target). `init` needs to be run at least once for each target.
 
-`plan` injects `profile`, `root_profile`, `service_name`, and `suffix` into `terraform`. When targeting a sandbox, it also injects a `tfvars` file for that environment (e.g., `dev.tfvars`) and a `user.tfvars` for developer-specific overrides.
+`plan` injects the necessary variables and `.tfvars` files for the current target.
 
 `apply` just applies the plan.
 
@@ -181,7 +229,6 @@ There is an `assume_role_arn` variable that can be added to your `provider` bloc
 
 ```hcl
 provider "aws" {
-  version = "~> 2.68"
   region  = var.region
   profile = var.profile
 
@@ -191,4 +238,4 @@ provider "aws" {
 }
 ```
 
-In CI/CD, you'll also need to handle injecting the backend details.
+In CI/CD, you'll also need to handle injecting the backend details and sensitive variables.
