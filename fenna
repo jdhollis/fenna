@@ -466,6 +466,7 @@ then
   case "$cmd" in
     backends) v2_backends ;;
     targets) v2_targets ;;
+    bootstrap) v2_bootstrap ;;
     onboard) v2_onboard ;;
     target) v2_target "$1" ;;
     init) v2_init "$@" ;;
