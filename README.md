@@ -140,7 +140,7 @@ fenna migrate
 
 This will convert your existing environment or sandbox to a target and reconfigure `fenna` to support the new UI. Backups of `.fenna` and `.terraform` are made in the process (just in case).
 
-If you don't feel like migrating, the v1 UI will continue to work as before.
+If you don't feel like migrating, the v1 UI will continue to work as before. But any new services you bootstrap will automatically use v2.
 
 ## Usage
 
