@@ -14,6 +14,8 @@ Currently, `fenna` only supports AWS and Git.
 
 You can find the `README` for version 1 of `fenna` [here](https://github.com/jdhollis/fenna/blob/58a0daafd3d649855f91ea7025fab8d76a2f9998/README.md).
 
+I discuss version 2 [here](https://theconsultingcto.com/posts/fenna-2/).
+
 ## Conventions
 
 `fenna` introduces some high-level conventions that make working with Terraform and communicating with your team simpler.
