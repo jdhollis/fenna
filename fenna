@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
+shopt -s extglob nullglob
+
 profile_name_for () {
-  local root_profile="$1" env="$2"
+  local root_profile="${1}" env="${2}"
 
   if [[ $env == "root" ]]
   then
-    echo "$root_profile"
+    echo "${root_profile}"
   else
     echo "${root_profile}-${env}"
   fi
@@ -123,19 +125,37 @@ plan () {
 v2_backends () {
   if [[ -d ".fenna/backends" ]]
   then
-    ls -1 .fenna/backends | grep ".tfvars" | sed -e 's/\.tfvars$//'
+    local backends
+
+    local paths
+    paths=(.fenna/backends/*.tfvars)
+
+    for path in "${paths[@]}"; do
+      backends+=("$(sed -e 's/^.fenna\/backends\///' <<< "${path}" | sed -e 's/.tfvars$//')")
+    done
+
+    printf "%s\n" "${backends[@]}"
   fi
 }
 
 v2_targets () {
   if [[ -d ".fenna/targets" ]]
   then
-    ls -1 .fenna/targets
+    local targets
+
+    local paths
+    paths=(.fenna/targets/*)
+
+    for path in "${paths[@]}"; do
+      targets+=("$(sed -e 's/^.fenna\/targets\///' <<< "${path}")")
+    done
+
+    printf "%s\n" "${targets[@]}"
   fi
 }
 
 v2_set_target () {
-  local name=$1
+  local name="${1}"
 
   rm -f .fenna/target
   ln -sf "targets/${name}" .fenna/target
@@ -144,7 +164,7 @@ v2_set_target () {
   mkdir -p ".fenna/targets/${name}/.terraform"
   ln -sf ".fenna/targets/${name}/.terraform" .terraform
 
-  echo $name
+  echo "${name}"
 }
 
 v2_migrate () {
@@ -152,7 +172,9 @@ v2_migrate () {
 
   echo "2" > .fenna/version
 
-  local backend=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+  local backend
+  backend=$(readlink .fenna/backend/current.tfvars | sed -e 's/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+
   rm .fenna/backend/current.tfvars
 
   local target
@@ -173,9 +195,10 @@ v2_migrate () {
 
   if [[ -f ".fenna/suffix" ]]
   then
-    local suffix=$(cat .fenna/suffix)
+    local suffix
+    suffix=$(cat .fenna/suffix)
 
-    if [[ -z "$suffix" ]]
+    if [[ -z "${suffix}" ]]
     then
       rm .fenna/suffix
     else
@@ -231,73 +254,83 @@ EOS
 
   touch "${target}.sensitive.tfvars"
 
-  v2_set_target $target
+  v2_set_target "${target}"
 }
 
 v2_configure_target () {
-  local name="$1"
+  local name="${1}"
 
-  local root_profile=$(cat .fenna/root_profile)
-  local backend_env=$(cat ".fenna/targets/${name}/backend/env")
-  local backend_profile=$(profile_name_for $root_profile $backend_env)
+  local root_profile
+  root_profile=$(cat .fenna/root_profile)
 
-  echo $backend_profile > ".fenna/targets/${name}/backend/profile"
+  local backend_env
+  backend_env=$(cat ".fenna/targets/${name}/backend/env")
 
-  local target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
-  local profile=$(profile_name_for $root_profile $target_env)
+  local backend_profile
+  backend_profile=$(profile_name_for "${root_profile}" "${backend_env}")
 
-  echo $profile > ".fenna/targets/${name}/profile"
+  echo "$backend_profile" > ".fenna/targets/${name}/backend/profile"
+
+  local target_env
+  target_env=$(readlink ".fenna/targets/${name}/backend/config.tfvars" | sed -e 's/\.\.\/\.\.\/\.\.\/backends\/\(.*\)\.tfvars/\1/')
+
+  local profile
+  profile=$(profile_name_for "${root_profile}" "${target_env}")
+
+  echo "$profile" > ".fenna/targets/${name}/profile"
 
   local suffix
 
   echo "What suffix would you like to use to distinguish your state and resources within this target?"
-    read -p "> " suffix
+    read -rp "> " suffix
   echo
 
-  if [[ ! -z "$suffix" ]]
+  if [[ -n "${suffix}" ]]
   then
-    echo $suffix > ".fenna/targets/${name}/suffix"
+    echo "${suffix}" > ".fenna/targets/${name}/suffix"
   fi
 }
 
 v2_target () {
-  local name="$1"
+  local name="${1}"
 
   if [[ -d ".fenna/targets/${name}" ]]
   then
     if [[ -f ".fenna/targets/${name}/profile" ]] && [[ -f ".fenna/targets/${name}/backend/profile" ]]
     then
-      v2_set_target $name
+      v2_set_target "${name}"
     else
-      v2_configure_target $name
-      v2_set_target $name
+      v2_configure_target "${name}"
+      v2_set_target "${name}"
     fi
   else
     mkdir -p ".fenna/targets/${name}/backend"
     mkdir ".fenna/targets/${name}/.terraform"
 
-    local environments=$(v2_backends)
+    local environments
+    mapfile -t environments <<< "$(v2_backends)"
+
     local backend
 
-    echo "Which backend would you like to use? [$(echo $environments)]"
-      read -p "> " backend
+    echo "Which backend would you like to use? [${environments[*]}]"
+      read -rp "> " backend
     echo
 
     ln -sf "../../../backends/${backend}.tfvars" ".fenna/targets/${name}/backend/config.tfvars"
 
     local backend_env
 
-    echo "Where is your backend stored? [$(echo $environments)]"
-      read -p "> " backend_env
+    echo "Where is your backend stored? [${environments[*]})]"
+      read -rp "> " backend_env
     echo
 
-    echo $backend_env > ".fenna/targets/${name}/backend/env"
+    echo "${backend_env}" > ".fenna/targets/${name}/backend/env"
 
     touch "${name}.tfvars"
     touch "${name}.sensitive.tfvars"
 
-    v2_configure_target $name
-    v2_set_target $name
+    v2_configure_target "${name}"
+    v2_set_target "${name}"
   fi
 }
 
@@ -305,31 +338,32 @@ v2_onboard () {
   local root_profile
 
   echo "What AWS profile would you like to use as your root profile?"
-    read -p "> " root_profile
+    read -rp "> " root_profile
   echo
 
-  echo $root_profile > .fenna/root_profile
+  echo "${root_profile}" > .fenna/root_profile
 
   touch user.tfvars
 
-  local targets=$(v2_targets)
+  local targets
+  mapfile -t targets <<< "$(v2_targets)"
 
-  if [[ ! -z "$targets" ]]
+  if [[ -n "${targets[*]}" ]]
   then
-    for t in "${targets[@]}"
+    for target in "${targets[@]}"
     do
-      touch "${t}.sensitive.tfvars"
+      touch "${target}.sensitive.tfvars"
     done
 
     local target
 
-    echo "Which target would you like to use? [$(echo $targets)]"
-      read -p "> " target
+    echo "Which target would you like to use? [${targets[*]}]"
+      read -rp "> " target
     echo
 
-    if [[ ! -z "$target" ]]
+    if [[ -n "${target}" ]]
     then
-      v2_target $target
+      v2_target "${target}"
     fi
   fi
 }
@@ -354,10 +388,10 @@ EOS
   local service_name
 
   echo "What is this service named?"
-    read -p "> " service_name
+    read -rp "> " service_name
   echo
 
-  echo $service_name > .fenna/service_name
+  echo "${service_name}" > .fenna/service_name
 
   cat > fenna_variables.tf <<EOS
 variable "assume_role_arn" {
@@ -396,10 +430,10 @@ EOS
     local repository_url
 
     echo "What's your backend config repository's URL?"
-      read -p "> " repository_url
+      read -rp "> " repository_url
     echo
 
-    git submodule add $repository_url .fenna/backends
+    git submodule add "${repository_url}" .fenna/backends
     echo
   fi
 
@@ -407,7 +441,9 @@ EOS
 }
 
 v2_init () {
-  local backend_profile=$(cat .fenna/target/backend/profile)
+  local backend_profile
+  backend_profile=$(cat .fenna/target/backend/profile)
+
   local suffix
 
   if [[ -f ".fenna/target/suffix" ]]
@@ -415,9 +451,10 @@ v2_init () {
     suffix=$(cat .fenna/target/suffix)
   fi
 
-  local state_key_root=$(cat .fenna/service_name)
+  local state_key_root
+  state_key_root=$(cat .fenna/service_name)
 
-  if [[ ! -z "$suffix" ]]
+  if [[ -n "${suffix}" ]]
   then
     state_key_root="${state_key_root}-${suffix}"
   fi
@@ -430,10 +467,17 @@ v2_init () {
 }
 
 v2_plan () {
-  local profile=$(cat .fenna/target/profile)
-  local root_profile=$(cat .fenna/root_profile)
-  local service_name=$(cat .fenna/service_name)
-  local target=$(readlink .fenna/target | sed -e 's/targets\/\(.*\)/\1/')
+  local profile
+  profile=$(cat .fenna/target/profile)
+
+  local root_profile
+  root_profile=$(cat .fenna/root_profile)
+
+  local service_name
+  service_name=$(cat .fenna/service_name)
+
+  local target
+  target=$(readlink .fenna/target | sed -e 's/targets\/\(.*\)/\1/')
 
   local suffix
 
@@ -459,20 +503,20 @@ v2_plan () {
 # Dispatch
 #
 
-cmd="$1"
+cmd="${1}"
 shift
 
 if [[ -f ".fenna/version" ]]
 then
-  case "$cmd" in
+  case "${cmd}" in
     backends) v2_backends ;;
     targets) v2_targets ;;
     bootstrap) v2_bootstrap ;;
     onboard) v2_onboard ;;
-    target) v2_target "$1" ;;
-    init) v2_init "$@" ;;
-    plan) v2_plan "$@" ;;
-    apply) apply "$@" ;;
+    target) v2_target "${1}" ;;
+    init) v2_init "${@}" ;;
+    plan) v2_plan "${@}" ;;
+    apply) apply "${@}" ;;
   esac
 else
   case "$cmd" in
