@@ -141,6 +141,7 @@ v2_set_target () {
   ln -sf "targets/${name}" .fenna/target
 
   rm -f .terraform
+  mkdir -p ".fenna/targets/${name}/.terraform"
   ln -sf ".fenna/targets/${name}/.terraform" .terraform
 
   echo $name
