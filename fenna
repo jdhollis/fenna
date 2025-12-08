@@ -294,6 +294,16 @@ v2_configure_target () {
 v2_target () {
   local name="${1}"
 
+  if [[ -z "$name" ]]
+  then
+    if [[ -L ".fenna/target" ]]
+    then
+      basename "$(readlink .fenna/target)"
+    fi
+
+    return
+  fi
+
   if [[ -d ".fenna/targets/${name}" ]]
   then
     if [[ -f ".fenna/targets/${name}/profile" ]] && [[ -f ".fenna/targets/${name}/backend/profile" ]]
