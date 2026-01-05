@@ -294,6 +294,16 @@ v2_configure_target () {
 v2_target () {
   local name="${1}"
 
+  if [[ -z "$name" ]]
+  then
+    if [[ -L ".fenna/target" ]]
+    then
+      basename "$(readlink .fenna/target)"
+    fi
+
+    return
+  fi
+
   if [[ -d ".fenna/targets/${name}" ]]
   then
     if [[ -f ".fenna/targets/${name}/profile" ]] && [[ -f ".fenna/targets/${name}/backend/profile" ]]
@@ -500,6 +510,28 @@ v2_plan () {
 
 
 #
+# Usage
+#
+
+usage () {
+  cat <<EOF
+Usage: $(basename "$0") <command> [<args>]
+
+  bootstrap  Configure a new service
+  onboard    Configure profiles for a bootstrapped service
+  migrate    Migrate from fenna v1 to v2
+
+  backends  List available backends
+  targets   List available targets
+
+  target <name>  Select a target or configure a new target
+  init           Run "terraform init" for the current target
+  plan           Run "terraform plan" for the current target
+  apply          Run "terraform apply" for the current target
+EOF
+}
+
+#
 # Dispatch
 #
 
@@ -517,6 +549,7 @@ then
     init) v2_init "${@}" ;;
     plan) v2_plan "${@}" ;;
     apply) apply "${@}" ;;
+    *) usage ;;
   esac
 else
   case "$cmd" in
@@ -526,5 +559,6 @@ else
     init) init "$@" ;;
     plan) plan "$@" ;;
     apply) apply "$@" ;;
+    *) usage ;;
   esac
 fi
